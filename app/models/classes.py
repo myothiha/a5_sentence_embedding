@@ -11,7 +11,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 arg_path = 'models/bert.args'
 meta = pickle.load(open(arg_path, 'rb'))
-word2id = meta['word2id']
 max_len = meta['max_len']
 max_mask = meta['max_mask']
 
@@ -25,7 +24,6 @@ d_k = meta['d_k']
 d_v = meta['d_v']
 n_segments = meta['n_segments']
 vocab_size = meta['vocab_size']
-word2id = meta['word2id']
 batch_size = meta['batch_size']
 max_mask = meta['max_mask']
 max_len = meta['max_len']
@@ -191,27 +189,39 @@ class BERT(nn.Module):
         return logits_lm, logits_nsp, output
 
 def calculate_similarity(model, tokenizer, sentence_a, sentence_b, device):
+    print('Hiiiiiiiii')
     # Tokenize and convert sentences to input IDs and attention masks
     inputs_a = tokenizer.encode(sentence_a)
     inputs_b = tokenizer.encode(sentence_b)
 
-    # Move input IDs and attention masks to the active device
+    print('Step 1')
+
+    # # Move input IDs and attention masks to the active device
     inputs_ids_a = inputs_a['input_ids'][0].unsqueeze(0).to(device)
     attention_a = inputs_a['attention_mask'][0].unsqueeze(0).to(device)
     inputs_ids_b = inputs_b['input_ids'][0].unsqueeze(0).to(device)
     attention_b = inputs_b['attention_mask'][0].unsqueeze(0).to(device)
 
-    # Extract token embeddings from BERT
+    print("Step 2")
+
+    # # Extract token embeddings from BERT
     u = model(inputs_ids_a, segment_ids, masked_pos)[2]  # all token embeddings A = batch_size, seq_len, hidden_dim
+
+    print("Step 3")
+
+    # v = model(inputs_ids_a, segment_ids, masked_pos)[2]  # all token embeddings A = batch_size, seq_len, hidden_dim
     v = model(inputs_ids_b, segment_ids, masked_pos)[2]  # all token embeddings B = batch_size, seq_len, hidden_dim
+    # v = u.clone().detach()
+    # u = v.clone().detach()
+    print("Step 4")
 
     # Get the mean-pooled vectors
     u = mean_pool(u, attention_a).detach().cpu().numpy().reshape(-1)  # batch_size, hidden_dim
     v = mean_pool(v, attention_b).detach().cpu().numpy().reshape(-1)  # batch_size, hidden_dim
+    print("Step 5")
 
     # Calculate cosine similarity
     similarity_score = cosine_similarity(u.reshape(1, -1), v.reshape(1, -1))[0, 0]
-
     return similarity_score
 
 
